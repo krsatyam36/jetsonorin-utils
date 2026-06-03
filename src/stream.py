@@ -550,6 +550,8 @@ def add_security_headers(response):
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Vary"] = "Authorization, Origin"
+    if not request.path.startswith("/video_feed"):
+        response.headers.setdefault("Connection", "close")
     if engine:
         counts = engine._detection_counts
         if counts:
