@@ -4,7 +4,6 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
-from functools import wraps
 
 import cv2
 from flask import Flask, Response, jsonify, request
@@ -38,6 +37,12 @@ class RateLimiter:
 
 
 rate_limiter = RateLimiter()
+
+import base64
+
+AUTH_ENABLED = os.getenv("AUTH_ENABLED", "false").lower() == "true"
+AUTH_USER = os.getenv("AUTH_USERNAME", "admin")
+AUTH_PASS = os.getenv("AUTH_PASSWORD", "changeme")
 
 
 def handle_signal(signum, frame):
@@ -474,6 +479,18 @@ def log_request_start():
     client_ip = request.remote_addr or "unknown"
     if not rate_limiter.is_allowed(client_ip):
         return jsonify({"error": "rate_limit", "message": "Too many requests"}), 429
+
+    if AUTH_ENABLED and request.path not in ("/health",):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Basic "):
+            return jsonify({"error": "unauthorized"}), 401
+        try:
+            decoded = base64.b64decode(auth[6:]).decode("utf-8")
+            user, pwd = decoded.split(":", 1)
+            if user != AUTH_USER or pwd != AUTH_PASS:
+                return jsonify({"error": "unauthorized"}), 401
+        except Exception:
+            return jsonify({"error": "unauthorized"}), 401
 
 
 @app.after_request
