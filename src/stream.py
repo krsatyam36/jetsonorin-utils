@@ -1,6 +1,28 @@
 import os
+import signal
+import subprocess
+import sys
 import cv2
 from flask import Flask, Response, jsonify
+
+
+def kill_port(port: int = 5000):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(("127.0.0.1", port)) != 0:
+            return
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.stdout:
+            pids = [int(pid) for pid in result.stdout.strip().split()]
+            for pid in pids:
+                os.kill(pid, signal.SIGTERM)
+            print(f"Killed {len(pids)} process(es) on port {port}")
+    except Exception as e:
+        print(f"Failed to free port {port}: {e}", file=sys.stderr)
 
 from detection import DetectionEngine, YOLOModelType
 
@@ -100,6 +122,7 @@ def toggle(detector: str):
 
 
 if __name__ == "__main__":
+    kill_port(5000)
     status = engine.get_status()
     print("Detection Engine initialized:")
     print(f"  YOLO:  {'ON' if status['yolo_enabled'] else 'OFF'} ({status.get('yolo_info', {}).get('model_path', 'N/A')})")
