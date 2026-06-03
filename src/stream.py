@@ -21,7 +21,7 @@ cfg = {}
 _latest_jpeg = None
 _start_time = time.time()
 _shutdown = False
-VERSION = "0.1.0"
+VERSION = "2.0.0"
 
 # ── Rate Limiter ─────────────────────────────────────────────────────────────
 
@@ -289,6 +289,11 @@ HTML_PAGE = """\
     background: rgba(0,0,0,0.65); padding: 4px 12px; border-radius: 4px;
     font-size: 0.85rem; font-family: monospace;
   }
+  #chart-wrap {
+    margin: 8px auto; width: 90%; max-width: 720px; border-radius: 6px;
+    overflow: hidden; background: rgba(0,0,0,0.3);
+  }
+  #chart-wrap canvas { display: block; width: 100%; height: 80px; }
 </style>
 </head>
 <body>
@@ -315,6 +320,8 @@ HTML_PAGE = """\
   <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps &nbsp;
   <kbd>T</kbd> theme
 </div>
+
+<div id="chart-wrap"><canvas id="perf-chart" height="80"></canvas></div>
 
 <div id="uptime-badge">--</div>
 <div id="fps-badge">-- FPS</div>
@@ -392,6 +399,11 @@ setInterval(async () => {
     const r = await fetch(BASE + '/status');
     const data = await r.json();
     updateUI(data);
+    fpsHistory.push(data.fps || 0);
+    detHistory.push(data.total_detections || 0);
+    if (fpsHistory.length > MAX_POINTS) fpsHistory.shift();
+    if (detHistory.length > MAX_POINTS) detHistory.shift();
+    drawChart();
   } catch {}
   try {
     const r = await fetch(BASE + '/uptime');
@@ -399,6 +411,64 @@ setInterval(async () => {
     uptimeEl.textContent = 'Up ' + d.uptime + 's';
   } catch {}
 }, 1000);
+
+// ── Performance chart ───────────────────────────────────────────
+const chartCanvas = document.getElementById('perf-chart');
+const chartCtx = chartCanvas.getContext('2d');
+const MAX_POINTS = 60;
+let fpsHistory = [];
+let detHistory = [];
+
+function resizeChart() {
+  const rect = chartCanvas.parentNode.getBoundingClientRect();
+  chartCanvas.width = rect.width;
+  chartCanvas.height = 80;
+}
+
+function drawChart() {
+  const w = chartCanvas.width, h = chartCanvas.height;
+  chartCtx.clearRect(0, 0, w, h);
+
+  const pad = 4;
+  const plotW = w - pad * 2;
+  const plotH = h - pad * 2;
+
+  if (fpsHistory.length < 2) return;
+
+  const maxFps = Math.max(60, ...fpsHistory);
+  const steps = fpsHistory.length;
+
+  // FPS line
+  chartCtx.beginPath();
+  chartCtx.strokeStyle = '#4f4';
+  chartCtx.lineWidth = 2;
+  for (let i = 0; i < steps; i++) {
+    const x = pad + (i / (MAX_POINTS - 1)) * plotW;
+    const y = pad + plotH - (fpsHistory[i] / maxFps) * plotH;
+    i === 0 ? chartCtx.moveTo(x, y) : chartCtx.lineTo(x, y);
+  }
+  chartCtx.stroke();
+
+  // Detection count bars
+  const barW = plotW / MAX_POINTS * 0.6;
+  const maxDet = Math.max(5, ...detHistory);
+  for (let i = 0; i < steps; i++) {
+    const x = pad + (i / (MAX_POINTS - 1)) * plotW - barW / 2;
+    const barH = (detHistory[i] / maxDet) * plotH;
+    chartCtx.fillStyle = 'rgba(255, 255, 0, 0.4)';
+    chartCtx.fillRect(x, pad + plotH - barH, barW, barH);
+  }
+
+  // Labels
+  chartCtx.fillStyle = '#888';
+  chartCtx.font = '10px monospace';
+  chartCtx.fillText(Math.round(fpsHistory[steps - 1]) + ' FPS', pad + 2, pad + 10);
+  chartCtx.fillStyle = 'rgba(255,255,0,0.7)';
+  chartCtx.fillText(detHistory[steps - 1] + ' det', pad + 2, pad + 22);
+}
+
+window.addEventListener('resize', resizeChart);
+resizeChart();
 </script>
 </body>
 </html>
