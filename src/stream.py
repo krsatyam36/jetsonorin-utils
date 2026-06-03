@@ -3,8 +3,11 @@ import signal
 import subprocess
 import sys
 import time
+from collections import defaultdict
+from functools import wraps
+
 import cv2
-from flask import Flask, Response, jsonify
+from flask import Flask, Response, jsonify, request
 
 from detection import DetectionEngine, YOLOModelType
 
@@ -16,6 +19,25 @@ cfg = {}
 _latest_jpeg = None
 _start_time = time.time()
 _shutdown = False
+
+# ── Rate Limiter ─────────────────────────────────────────────────────────────
+
+class RateLimiter:
+    def __init__(self, max_requests: int = 100, window: int = 60):
+        self.max_requests = max_requests
+        self.window = window
+        self._clients: dict[str, list[float]] = defaultdict(list)
+
+    def is_allowed(self, key: str) -> bool:
+        now = time.time()
+        self._clients[key] = [t for t in self._clients[key] if now - t < self.window]
+        if len(self._clients[key]) >= self.max_requests:
+            return False
+        self._clients[key].append(now)
+        return True
+
+
+rate_limiter = RateLimiter()
 
 
 def handle_signal(signum, frame):
@@ -445,8 +467,13 @@ request_logger = logging.getLogger("access")
 
 @app.before_request
 def log_request_start():
-    from flask import request
     request._start_time = time.time()
+
+    if request.path.startswith("/video_feed"):
+        return
+    client_ip = request.remote_addr or "unknown"
+    if not rate_limiter.is_allowed(client_ip):
+        return jsonify({"error": "rate_limit", "message": "Too many requests"}), 429
 
 
 @app.after_request
