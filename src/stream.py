@@ -403,7 +403,11 @@ def video_feed():
 def snapshot():
     if _latest_jpeg is None:
         return "No frame yet", 503
-    return Response(_latest_jpeg, mimetype="image/jpeg")
+    return Response(
+        _latest_jpeg,
+        mimetype="image/jpeg",
+        headers={"Content-Disposition": "inline; filename=snapshot.jpg"},
+    )
 
 
 @app.route("/info")
@@ -534,6 +538,7 @@ def add_security_headers(response):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Vary"] = "Authorization, Origin"
     if request.path.startswith("/video_feed"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
