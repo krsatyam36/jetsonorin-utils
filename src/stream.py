@@ -554,6 +554,9 @@ def add_security_headers(response):
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Vary"] = "Authorization, Origin"
+    if hasattr(request, "_start_time"):
+        dur_ms = int((time.time() - request._start_time) * 1000)
+        response.headers["X-Response-Time"] = f"{dur_ms}ms"
     if not request.path.startswith("/video_feed"):
         response.headers.setdefault("Connection", "close")
     if engine:
