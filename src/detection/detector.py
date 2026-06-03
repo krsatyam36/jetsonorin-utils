@@ -133,15 +133,25 @@ class DetectionEngine:
         self, frame: np.ndarray, detections: List[DetectionResult], color: Tuple[int, int, int],
     ) -> np.ndarray:
         for det in detections:
-            cv2.rectangle(frame, (det.x1, det.y1), (det.x2, det.y2), color, 2)
+            c = self._class_color(det.class_id, color)
+            cv2.rectangle(frame, (det.x1, det.y1), (det.x2, det.y2), c, 2)
             text = f"{det.class_name} {det.confidence:.2f}"
             (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(frame, (det.x1, det.y1 - th - 6), (det.x1 + tw + 4, det.y1), color, -1)
+            cv2.rectangle(frame, (det.x1, det.y1 - th - 6), (det.x1 + tw + 4, det.y1), c, -1)
             cv2.putText(
                 frame, text, (det.x1 + 2, det.y1 - 4),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA,
             )
         return frame
+
+    @staticmethod
+    def _class_color(class_id: int, fallback: Tuple[int, int, int]) -> Tuple[int, int, int]:
+        palette = [
+            (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255),
+            (0, 255, 255), (128, 255, 0), (255, 128, 0), (128, 0, 255), (255, 0, 128),
+            (0, 128, 255), (0, 255, 128), (128, 128, 255), (255, 128, 128), (128, 255, 128),
+        ]
+        return palette[class_id % len(palette)] if class_id >= 0 else fallback
 
     def _draw_stats(self, frame: np.ndarray, all_detections: Dict[str, List[DetectionResult]]) -> np.ndarray:
         total = sum(len(dets) for dets in all_detections.values())
