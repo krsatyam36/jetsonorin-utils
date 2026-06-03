@@ -6,23 +6,27 @@ import cv2
 from flask import Flask, Response, jsonify
 
 
-def kill_port(port: int = 5000):
+def kill_port(port: int = 5000, max_retries: int = 5):
     import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        if s.connect_ex(("127.0.0.1", port)) != 0:
-            return
-    try:
-        result = subprocess.run(
-            ["lsof", "-ti", f":{port}"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.stdout:
-            pids = [int(pid) for pid in result.stdout.strip().split()]
-            for pid in pids:
-                os.kill(pid, signal.SIGTERM)
-            print(f"Killed {len(pids)} process(es) on port {port}")
-    except Exception as e:
-        print(f"Failed to free port {port}: {e}", file=sys.stderr)
+    import time
+    for attempt in range(max_retries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.stdout:
+                pids = [int(pid) for pid in result.stdout.strip().split()]
+                sig = signal.SIGKILL if attempt >= max_retries - 2 else signal.SIGTERM
+                for pid in pids:
+                    os.kill(pid, sig)
+                print(f"Killed {len(pids)} process(es) on port {port} with {sig.name}")
+        except Exception as e:
+            print(f"Failed to free port {port}: {e}", file=sys.stderr)
+        time.sleep(0.5)
 
 from detection import DetectionEngine, YOLOModelType
 
