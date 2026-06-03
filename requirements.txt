@@ -3,10 +3,16 @@ flask>=3.0.0
 opencv-python>=4.9.0
 
 # YOLO detection backends
-ultralytics>=8.3.0                    # Ultralytics YOLO (v8-v11 native PyTorch)
-onnxruntime-gpu>=1.18.0               # ONNX Runtime with CUDA for Jetson
-tensorrt>=8.6.0                       # TensorRT for Jetson-optimized inference
-pycuda>=2022.2.2                      # CUDA buffer management for TensorRT
+ultralytics>=8.3.0
+onnxruntime-gpu>=1.18.0
+tensorrt>=8.6.0
+pycuda>=2022.2.2
 
 # Utilities
 numpy>=1.24.0
+pyyaml>=6.0
+
+# Development
+# pytest>=8.0.0
+# pytest-cov>=5.0.0
+# ruff>=0.4.0
