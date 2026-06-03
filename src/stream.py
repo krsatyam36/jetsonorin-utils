@@ -446,13 +446,17 @@ def uptime():
 @app.route("/detections")
 def detections():
     s = engine.get_status()
-    return jsonify(s.get("detection_counts", {}))
+    counts = s.get("detection_counts", {})
+    total = sum(counts.values())
+    return jsonify({**counts, "total_detections": total})
 
 
 @app.route("/status")
 def status():
     data = engine.get_status()
     data["version"] = VERSION
+    counts = data.get("detection_counts", {})
+    data["total_detections"] = sum(counts.values())
     return jsonify(data)
 
 
