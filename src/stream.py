@@ -1,3 +1,5 @@
+import base64
+import logging
 import os
 import signal
 import subprocess
@@ -39,8 +41,6 @@ class RateLimiter:
 
 
 rate_limiter = RateLimiter()
-
-import base64
 
 AUTH_ENABLED = os.getenv("AUTH_ENABLED", "false").lower() == "true"
 AUTH_USER = os.getenv("AUTH_USERNAME", "admin")
@@ -147,10 +147,10 @@ def interactive_setup():
         chosen_model = best_match["id"]
     print(f"  → {chosen_model}")
 
-    print(f"\n[3] Capture resolution")
+    print("\n[3] Capture resolution")
     res = _pick(RES_PRESETS, f"  Choose [1-{len(RES_PRESETS)}] (default: 2): ", default=1)
 
-    print(f"\n[4] Detectors (all OFF by default — toggle live with keyboard)")
+    print("\n[4] Detectors (all OFF by default — toggle live with keyboard)")
     print("     F = Face detection")
     print("     M = Motion detection")
     print("     H = Human (YOLO) detection")
@@ -269,6 +269,16 @@ HTML_PAGE = """\
     padding: 4px 12px; border-radius: 4px; font-size: 1rem;
   }
   body.light #theme-btn { background: rgba(0,0,0,0.15); color: #333; }
+  #conf-badge {
+    position: fixed; top: 34px; right: 14px;
+    background: rgba(0,0,0,0.65); padding: 4px 12px; border-radius: 4px;
+    font-size: 0.85rem; font-family: monospace;
+  }
+  #uptime-badge {
+    position: fixed; bottom: 10px; left: 14px;
+    background: rgba(0,0,0,0.65); padding: 4px 12px; border-radius: 4px;
+    font-size: 0.8rem; font-family: monospace;
+  }
   #fps-badge {
     position: fixed; top: 10px; right: 14px;
     background: rgba(0,0,0,0.65); padding: 4px 12px; border-radius: 4px;
@@ -278,7 +288,8 @@ HTML_PAGE = """\
 </head>
 <body>
 
-<button id="theme-btn" onclick="document.body.classList.toggle('light');this.textContent=document.body.classList.contains('light')?'☀':'🌙'">🌙</button>
+<button id="theme-btn"
+  onclick="document.body.classList.toggle('light');this.textContent=document.body.classList.contains('light')?'☀':'🌙'">🌙</button>
 <h1>Jetson Detection Stream</h1>
 <p style="font-size:0.8rem;color:#888;margin-bottom:4px" id="info-line">{model} @ {width}x{height}</p>
 
@@ -300,9 +311,9 @@ HTML_PAGE = """\
   <kbd>T</kbd> theme
 </div>
 
-<div id="uptime-badge" style="position:fixed;bottom:10px;left:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.8rem;font-family:monospace;">--</div>
+<div id="uptime-badge">--</div>
 <div id="fps-badge">-- FPS</div>
-<div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
+<div id="conf-badge">Conf: 0.50</div>
 
 <script>
 const BASE = '';
@@ -391,7 +402,8 @@ setInterval(async () => {
 
 @app.route("/")
 def index():
-    return HTML_PAGE.format(model=cfg["model"], width=cfg["width"], height=cfg["height"]), 200, {"Content-Type": "text/html; charset=utf-8"}
+    headers = {"Content-Type": "text/html; charset=utf-8"}
+    return HTML_PAGE.format(model=cfg["model"], width=cfg["width"], height=cfg["height"]), 200, headers
 
 
 @app.route("/video_feed")
@@ -498,8 +510,6 @@ def toggle(detector: str):
 
 
 # ── Request Logging ──────────────────────────────────────────────────────────
-
-import logging
 
 request_logger = logging.getLogger("access")
 
@@ -616,7 +626,7 @@ def main():
     print(f"\n  Stream:  http://<JETSON_IP>:{port}")
     print(f"  Model:   {cfg['model']}")
     print(f"  Target:  {target_fps} FPS @ {w}x{h}")
-    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=conf  A=all  T=theme  1/2/3=fps")
+    print("  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=conf  A=all  T=theme  1/2/3=fps")
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
