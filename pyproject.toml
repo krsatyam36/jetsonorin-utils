@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "jetsonorin-utils"
+version = "0.1.0"
+description = "Jetson Orin real-time detection stream server"
+requires-python = ">=3.10"
+dependencies = [
+    "flask>=3.0",
+    "opencv-python>=4.8",
+    "numpy>=1.24",
+    "ultralytics>=8.3",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.4"]
