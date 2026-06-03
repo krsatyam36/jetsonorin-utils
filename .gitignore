@@ -1,0 +1,53 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Model weights and detection artifacts
+models/
+*.pt
+*.onnx
+*.engine
+*.trt
+*.pth
+*.weights
+*.bin
+*.prototxt
+*.caffemodel
+
+# Environment and virtual environments
+.env
+.env.*
+venv/
+.venv/
+env/
+
+# IDE and editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.dmg
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+logs/
+
+# Distribution / build
+dist/
+build/
+*.egg-info/
+
+# Jupyter notebooks (checkpoints)
+.ipynb_checkpoints/
+
+# Coverage
+htmlcov/
+.coverage
