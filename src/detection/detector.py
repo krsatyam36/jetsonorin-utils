@@ -57,6 +57,7 @@ class DetectionEngine:
         self._fps = 0.0
         self._prev_time = time.time()
         self._frame_count = 0
+        self._detection_counts = {}
 
     def _init_yolo(self, model: str, model_type: YOLOModelType, device: str):
         model_path = self._resolve_model_path(model, model_type)
@@ -125,6 +126,7 @@ class DetectionEngine:
                 logger.error("Motion detection error: %s", e)
 
         annotated = self._draw_stats(annotated, all_detections)
+        self._detection_counts = {k: len(v) for k, v in all_detections.items()}
         return annotated, all_detections
 
     def _draw_detections(
@@ -180,6 +182,7 @@ class DetectionEngine:
             "yolo_info": self.yolo_backend.get_model_info() if self.yolo_backend else None,
             "face_info": self.face_detector.get_info() if self.face_detector else None,
             "motion_info": self.motion_detector.get_info() if self.motion_detector else None,
+            "detection_counts": self._detection_counts,
         }
 
     def set_confidence_threshold(self, threshold: float):

@@ -259,10 +259,15 @@ async function toggle(detector) {
 }
 
 function updateUI(data) {
-  const map = { face: 'face_enabled', motion: 'motion_enabled', human: 'yolo_enabled' };
-  for (const [key, prop] of Object.entries(map)) {
+  const labels = { face: 'Face', motion: 'Motion', human: 'Human' };
+  const props = { face: 'face_enabled', motion: 'motion_enabled', human: 'yolo_enabled' };
+  const countKeys = { face: 'face', motion: 'motion', human: 'yolo' };
+  for (const [key, label] of Object.entries(labels)) {
     const el = badges[key];
-    if (data[prop]) { el.className = 'on'; } else { el.className = 'off'; }
+    const on = data[props[key]];
+    const cnt = data.detection_counts ? data.detection_counts[countKeys[key]] : 0;
+    el.className = on ? 'on' : 'off';
+    el.textContent = label + ' [' + key.toUpperCase() + ']' + (on && cnt > 0 ? ' ' + cnt : '');
   }
   if (data.fps != null) fpsEl.textContent = data.fps.toFixed(1) + ' FPS';
 }
