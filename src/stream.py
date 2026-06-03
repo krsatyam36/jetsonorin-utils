@@ -162,6 +162,10 @@ def generate_frames():
         limiter.wait()
         annotated, detections = engine.process_frame(frame)
 
+        now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+        cv2.putText(annotated, now_str, (annotated.shape[1] - 220, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1, cv2.LINE_AA)
+
         ret, buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
         frame_bytes = buffer.tobytes()
         global _latest_jpeg
