@@ -405,6 +405,17 @@ def snapshot():
     return Response(_latest_jpeg, mimetype="image/jpeg")
 
 
+@app.route("/info")
+def info():
+    return jsonify({
+        "service": "jetson-stream",
+        "version": "0.1.0",
+        "uptime": round(time.time() - _start_time, 1),
+        "target_fps": target_fps,
+        "resolution": f"{cfg.get('width', 0)}x{cfg.get('height', 0)}",
+    })
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "service": "jetson-stream"})
