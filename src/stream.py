@@ -439,11 +439,14 @@ def toggle(detector: str):
 # ── CORS ─────────────────────────────────────────────────────────────────────
 
 @app.after_request
-def add_cors_headers(response):
+def add_security_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response.headers["Server-Timing"] = f"uptime;dur={time.time() - _start_time:.0f}"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
     return response
 
 
