@@ -1,0 +1,17 @@
+services:
+  stream:
+    build: .
+    container_name: jetson-stream
+    devices:
+      - /dev/video0:/dev/video0
+    ports:
+      - "5000:5000"
+    environment:
+      - YOLO_MODEL=yolo11n.pt
+      - YOLO_DEVICE=cuda:0
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    restart: unless-stopped
+    runtime: nvidia
