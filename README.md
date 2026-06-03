@@ -5,29 +5,137 @@
 ![OpenCV](https://img.shields.io/badge/opencv-%23white.svg?style=for-the-badge&logo=opencv&logoColor=white)
 ![YOLO](https://img.shields.io/badge/YOLO-00FFFF?style=for-the-badge&logo=YOLO&logoColor=black)
 
-Production-grade live video streaming server with runtime-togglable face, motion, and YOLO object detection — purpose-built for NVIDIA Jetson Orin.
+Production-grade live video streaming with runtime-togglable face, motion, and YOLO object detection — built for NVIDIA Jetson Orin.
 
-## Features
-
-- **Live MJPEG Stream** — Low-latency video from any V4L2 camera, viewable in any browser.
-- **Interactive CLI Setup** — Choose target FPS (60/30/15), model (YOLOv8/v11), and resolution (480p/720p/1080p) before launch.
-- **Three Detectors, Toggle Live** — Face (Haar/DNN), Motion (MOG2/KNN/FrameDiff), YOLO (v8/v11). All default OFF, toggle via keyboard or API.
-- **Web UI with Keyboard Shortcuts** — `F` face, `M` motion, `H` human, `S` snapshot, `+`/`-` confidence, `A` all, `T` dark/light theme, `1`/`2`/`3` FPS.
-- **Dark/Light Theme** — Toggle via `T` key or theme button.
-- **Live Detection Counts** — Per-detector counts shown in status bar, updated every second.
-- **REST API** — Status, info, health, ping, uptime, detections, snapshot, toggle, confidence, FPS control.
-- **Production Hardening** — CORS, security headers, rate limiting, optional Basic Auth, request logging, JSON error handlers, graceful shutdown.
-- **Docker Support** — Multi-stage Dockerfile + docker-compose for Jetson with GPU passthrough.
-- **CI/CD** — GitHub Actions for ruff lint + pytest.
-
-## Quick Start
-
-```bash
+```
 pip install -r requirements.txt
 python3 src/stream.py
+# Open http://<JETSON_IP>:5000
 ```
 
-Choose FPS → model → resolution interactively, then open `http://<JETSON_IP>:5000`.
+---
+
+## StreamServer
+
+```python
++run(host, port)                                 # Start Flask server
++GET /                                           # Web UI (HTML + JS)
++GET /video_feed                                 # MJPEG stream (multipart/x-mixed-replace)
++GET /snapshot                                   # Latest frame as JPEG download
+```
+
+```
+         +---------+
+         | Browser |◄── MJPEG ── /video_feed
+         +---------+        │
+              │             ├── /snapshot
+              ▼             └── /status (JSON)
+         +------------+
+         | StreamServer|──► DetectionEngine.process_frame()
+         +------------+
+```
+
+Status, info, health, ping, uptime, detections, toggle, confidence, fps, ready
+
+## DetectionEngine
+
+```python
++process_frame(frame) : (np.ndarray, dict)      # Run all enabled detectors, return annotated frame
++get_status() : dict                             # FPS, enabled flags, detection counts
++set_confidence_threshold(threshold) : void        # Clamp 0.0–1.0
++toggle_yolo(enabled) : void
++toggle_face(enabled) : void
++toggle_motion(enabled) : void
++fps : float                                      # Property: current FPS
+```
+
+```
+                    +------------------+
+                    | DetectionEngine  |
+                    +------------------+
+                    | enable_yolo      |
+                    | enable_face      |
+                    | enable_motion    |
+                    +--------+---------+
+                             │
+               ┌─────────────┼─────────────┐
+               ▼             ▼             ▼
+         +----------+  +----------+  +-------------+
+         | YOLO     |  | Face     |  | Motion      │
+         | Backend  |  | Detector |  | Detector    │
+         +----------+  +----------+  +-------------+
+         | detect() |  | detect() |  | detect()    |
+         +----------+  +----------+  +-------------+
+```
+
+All backends initialized at startup, default **OFF**. Toggling enables inference without restart.
+
+## YOLOBackend
+
+```python
++detect(frame, confidence_threshold) : List[DetectionResult]
++get_model_info() : dict
+```
+
+**UltralyticsBackend** — Native PyTorch (YOLOv5–v11)
+```python
++__init__(model_path, model_dir, device)
+```
+
+**ONNXBackend** — Cross-platform GPU inference
+```python
++__init__(model_path, model_dir, class_names)
+```
+
+**TensorRTBackend** — Jetson-optimized inference
+```python
++__init__(model_path, model_dir, class_names)
+```
+
+### DetectionResult
+
+```python
++bbox : Tuple[int, int, int, int]                # (x1, y1, x2, y2)
++confidence : float
++class_id : int
++class_name : str
++x1, y1, x2, y2 : int                            # Properties
++width, height : int
++area : int
++center : Tuple[int, int]
+```
+
+## FaceDetector
+
+```python
++detect(frame, confidence_threshold) : List[DetectionResult]
++get_info() : dict
+```
+
+| Method | Backend |
+|--------|---------|
+| `haar` | Haar cascade (CPU, lightweight) |
+| `dnn`  | OpenCV SSD (GPU, accurate) |
+
+Models auto-downloaded on first use.
+
+## MotionDetector
+
+```python
++detect(frame) : List[DetectionResult]            # Returns motion regions as DetectionResult list
++reset() : void                                   # Clear background model
++get_info() : dict
+```
+
+| Method | Description |
+|--------|-------------|
+| `mog2` | Adaptive Gaussian mixture (OpenCV) |
+| `knn`  | K-nearest neighbours background subtraction |
+| `frame_diff` | Frame differencing (cheapest, no background model) |
+
+Motion detection runs every **3rd frame** to preserve FPS.
+
+---
 
 ## Keyboard Shortcuts
 
@@ -42,58 +150,15 @@ Choose FPS → model → resolution interactively, then open `http://<JETSON_IP>
 | `T` | Toggle dark/light theme |
 | `1` / `2` / `3` | Set target FPS to 60 / 30 / 15 |
 
-## API Endpoints
+## Models
 
-| Endpoint | Description |
-|----------|-------------|
-| `/` | Web UI |
-| `/video_feed` | MJPEG stream |
-| `/status` | Full system status (FPS, detectors, counts) |
-| `/info` | Version, uptime, config |
-| `/health` | Health check (exempt from rate limit + auth) |
-| `/ready` | Readiness probe (returns 503 until engine initializes) |
-| `/ping` | Plain-text `pong` |
-| `/uptime` | Server uptime in seconds |
-| `/detections` | Current per-detector detection counts |
-| `/snapshot` | Latest frame as JPEG download |
-| `/toggle/<detector>` | Toggle `face`, `motion`, `human`, or `all` |
-| `/confidence/<up\|down>` | Adjust confidence threshold |
-| `/fps/<15\|30\|60>` | Set target FPS |
-
-## Available Models
-
-| Model | Best For |
-|-------|----------|
-| YOLO11n (Nano) | 60 FPS — fastest |
-| YOLO11s (Small) | 30 FPS |
-| YOLO11m (Medium) | 15 FPS |
-| YOLO11l (Large) | Lower FPS, higher accuracy |
-| YOLO11x (X-Large) | Maximum accuracy |
-| YOLOv8n (Nano) | 60 FPS — lighter than YOLO11n |
-| YOLOv8s (Small) | 30 FPS |
-| YOLOv8m (Medium) | 15 FPS |
-| YOLOv8l (Large) | Lower FPS |
-| YOLOv8x (X-Large) | Most accurate (+ legacy compatibility) |
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `5000` | Server port |
-| `YOLO_DEVICE` | `cuda:0` | Inference device |
-| `FACE_METHOD` | `haar` | `haar` or `dnn` |
-| `MOTION_METHOD` | `mog2` | `mog2`, `knn`, or `frame_diff` |
-| `AUTH_ENABLED` | `false` | Enable Basic Auth |
-| `AUTH_USERNAME` | `admin` | Basic Auth username |
-| `AUTH_PASSWORD` | `changeme` | Basic Auth password |
-
-## Docker
-
-```bash
-docker compose up --build
-```
-
-Requires NVIDIA Container Toolkit (`nvidia-ctk`) on the host.
+| YOLO11 | YOLOv8 | Target FPS |
+|--------|--------|------------|
+| 11n (Nano) | 8n (Nano) | 60 |
+| 11s (Small) | 8s (Small) | 30 |
+| 11m (Medium) | 8m (Medium) | 15 |
+| 11l (Large) | 8l (Large) | 10–25 |
+| 11x (X-Large) | 8x (X-Large) | 5–15 |
 
 ## Development
 
@@ -104,22 +169,8 @@ make lint       # ruff check
 make test       # pytest -v
 make format     # ruff format
 make clean      # pyclean + coverage erase
+docker compose up --build  # Docker (requires nvidia-ctk)
 ```
-
-## Architecture
-
-```
-src/
-├── stream.py                # Flask app: routes, middleware, CLI setup, HTML/JS UI
-└── detection/
-    ├── __init__.py           # Public API exports
-    ├── detector.py           # DetectionEngine orchestrator
-    ├── yolo_backend.py       # YOLO backends (Ultralytics/ONNX/TensorRT)
-    ├── face_detector.py      # Face detection (Haar/DNN)
-    └── motion_detector.py    # Motion detection (MOG2/KNN/FrameDiff)
-```
-
-All backends are initialized at startup but start **disabled**. Toggling via keyboard or API enables inference without restarting the server. Motion detection runs at 1/3 frame rate to preserve FPS.
 
 ## License
 
