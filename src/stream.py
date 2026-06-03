@@ -122,16 +122,16 @@ def interactive_setup():
 # ── FPS limiter ──────────────────────────────────────────────────────────────
 
 class FPSLimiter:
-    def __init__(self, target: float):
-        self.target = target
-        self._period = 1.0 / target if target > 0 else 0
+    def __init__(self):
         self._last = time.perf_counter()
 
     def wait(self):
-        if self._period <= 0:
+        global target_fps
+        period = 1.0 / target_fps if target_fps > 0 else 0
+        if period <= 0:
             return
         elapsed = time.perf_counter() - self._last
-        remaining = self._period - elapsed
+        remaining = period - elapsed
         if remaining > 0:
             time.sleep(remaining)
         self._last = time.perf_counter()
@@ -152,7 +152,7 @@ def generate_frames():
         print("Error: Could not open camera.")
         return
 
-    limiter = FPSLimiter(target_fps)
+    limiter = FPSLimiter()
 
     while True:
         success, frame = cap.read()
@@ -237,7 +237,7 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps
 </div>
 
 <div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
@@ -250,7 +250,12 @@ const badges = {
   motion: document.getElementById('s-motion'),
   human: document.getElementById('s-human'),
 };
-const fpsEl = document.getElementById('fps-badge');
+  const fpsEl = document.getElementById('fps-badge');
+
+async function setFps(val) {
+  await fetch(BASE + '/fps/' + val);
+  fpsEl.textContent = val + ' FPS (target)';
+}
 
 async function toggle(detector) {
   const r = await fetch(BASE + '/toggle/' + detector);
@@ -287,6 +292,9 @@ document.addEventListener('keydown', function(e) {
   else if (key === '=' || key === '+') { e.preventDefault(); adjustConf('up'); }
   else if (key === '-') { e.preventDefault(); adjustConf('down'); }
   else if (key === 'a') { e.preventDefault(); toggle('all'); }
+  else if (key === '1') { e.preventDefault(); setFps(60); }
+  else if (key === '2') { e.preventDefault(); setFps(30); }
+  else if (key === '3') { e.preventDefault(); setFps(15); }
 });
 
 async function adjustConf(dir) {
@@ -338,6 +346,14 @@ def confidence(direction: str):
     elif direction == "down":
         engine.set_confidence_threshold(thresh - 0.05)
     return jsonify({"confidence": engine.confidence_threshold})
+
+
+@app.route("/fps/<int:fps_val>")
+def set_fps(fps_val: int):
+    global target_fps
+    if fps_val in (15, 30, 60):
+        target_fps = fps_val
+    return jsonify({"target_fps": target_fps})
 
 
 @app.route("/toggle/<detector>")
