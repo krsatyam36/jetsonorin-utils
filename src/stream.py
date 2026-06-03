@@ -13,6 +13,7 @@ app = Flask(__name__)
 engine = None
 target_fps = 30
 cfg = {}
+_latest_jpeg = None
 
 
 # ── Port killer ──────────────────────────────────────────────────────────────
@@ -163,6 +164,8 @@ def generate_frames():
 
         ret, buffer = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
         frame_bytes = buffer.tobytes()
+        global _latest_jpeg
+        _latest_jpeg = frame_bytes
 
         yield (b"--frame\r\n"
                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
@@ -230,7 +233,7 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human (YOLO)
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot
 </div>
 
 <div id="fps-badge">-- FPS</div>
@@ -264,6 +267,13 @@ document.addEventListener('keydown', function(e) {
   if (key === 'f') { e.preventDefault(); toggle('face'); }
   else if (key === 'm') { e.preventDefault(); toggle('motion'); }
   else if (key === 'h') { e.preventDefault(); toggle('human'); }
+  else if (key === 's') {
+    e.preventDefault();
+    const a = document.createElement('a');
+    a.href = '/snapshot';
+    a.download = 'snapshot_' + Date.now() + '.jpg';
+    a.click();
+  }
 });
 
 setInterval(async () => {
@@ -287,6 +297,13 @@ def index():
 @app.route("/video_feed")
 def video_feed():
     return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/snapshot")
+def snapshot():
+    if _latest_jpeg is None:
+        return "No frame yet", 503
+    return Response(_latest_jpeg, mimetype="image/jpeg")
 
 
 @app.route("/status")
@@ -333,7 +350,7 @@ if __name__ == "__main__":
     print(f"\n  Stream:  http://<JETSON_IP>:{port}")
     print(f"  Model:   {cfg['model']}")
     print(f"  Target:  {target_fps} FPS @ {w}x{h}")
-    print(f"  Keys:    F=face  M=motion  H=human")
+    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot")
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
