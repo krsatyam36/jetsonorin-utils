@@ -237,7 +237,7 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> confidence
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all
 </div>
 
 <div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
@@ -286,6 +286,7 @@ document.addEventListener('keydown', function(e) {
   }
   else if (key === '=' || key === '+') { e.preventDefault(); adjustConf('up'); }
   else if (key === '-') { e.preventDefault(); adjustConf('down'); }
+  else if (key === 'a') { e.preventDefault(); toggle('all'); }
 });
 
 async function adjustConf(dir) {
@@ -348,6 +349,11 @@ def toggle(detector: str):
         engine.toggle_motion(not s["motion_enabled"])
     elif detector == "human":
         engine.toggle_yolo(not s["yolo_enabled"])
+    elif detector == "all":
+        any_on = s["face_enabled"] or s["motion_enabled"] or s["yolo_enabled"]
+        engine.toggle_face(not any_on)
+        engine.toggle_motion(not any_on)
+        engine.toggle_yolo(not any_on)
     else:
         return jsonify({"error": f"Unknown detector: {detector}"}), 400
     return jsonify(engine.get_status())
@@ -378,7 +384,7 @@ if __name__ == "__main__":
     print(f"\n  Stream:  http://<JETSON_IP>:{port}")
     print(f"  Model:   {cfg['model']}")
     print(f"  Target:  {target_fps} FPS @ {w}x{h}")
-    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=confidence")
+    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=conf  A=all")
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
