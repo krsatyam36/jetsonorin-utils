@@ -15,6 +15,20 @@ target_fps = 30
 cfg = {}
 _latest_jpeg = None
 _start_time = time.time()
+_shutdown = False
+
+
+def handle_signal(signum, frame):
+    global _shutdown
+    if _shutdown:
+        sys.exit(1)
+    _shutdown = True
+    print(f"\nReceived signal {signum}, shutting down gracefully...")
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, handle_signal)
+signal.signal(signal.SIGTERM, handle_signal)
 
 
 # ── Port killer ──────────────────────────────────────────────────────────────
