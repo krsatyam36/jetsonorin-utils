@@ -214,6 +214,17 @@ HTML_PAGE = """\
     font-family: monospace; border: 1px solid #555; margin: 0 2px;
   }
   .help .active { color: #4f4; }
+  body.light { background: #eef; color: #222; }
+  body.light .status-bar span { background: #ddd; }
+  body.light .help { color: #666; }
+  body.light .help kbd { background: #ccc; color: #333; border-color: #999; }
+  body.light .on { color: #070; }
+  #theme-btn {
+    position: fixed; top: 10px; left: 14px; cursor: pointer;
+    background: rgba(0,0,0,0.65); border: none; color: #eee;
+    padding: 4px 12px; border-radius: 4px; font-size: 1rem;
+  }
+  body.light #theme-btn { background: rgba(0,0,0,0.15); color: #333; }
   #fps-badge {
     position: fixed; top: 10px; right: 14px;
     background: rgba(0,0,0,0.65); padding: 4px 12px; border-radius: 4px;
@@ -223,6 +234,7 @@ HTML_PAGE = """\
 </head>
 <body>
 
+<button id="theme-btn" onclick="document.body.classList.toggle('light');this.textContent=document.body.classList.contains('light')?'☀':'🌙'">🌙</button>
 <h1>Jetson Detection Stream</h1>
 
 <div class="status-bar" id="status-bar">
@@ -237,7 +249,7 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps &nbsp; <kbd>T</kbd> theme
 </div>
 
 <div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
@@ -295,6 +307,12 @@ document.addEventListener('keydown', function(e) {
   else if (key === '1') { e.preventDefault(); setFps(60); }
   else if (key === '2') { e.preventDefault(); setFps(30); }
   else if (key === '3') { e.preventDefault(); setFps(15); }
+  else if (key === 't') {
+    e.preventDefault();
+    document.body.classList.toggle('light');
+    document.getElementById('theme-btn').textContent =
+      document.body.classList.contains('light') ? '☀' : '🌙';
+  }
 });
 
 async function adjustConf(dir) {
@@ -400,7 +418,7 @@ if __name__ == "__main__":
     print(f"\n  Stream:  http://<JETSON_IP>:{port}")
     print(f"  Model:   {cfg['model']}")
     print(f"  Target:  {target_fps} FPS @ {w}x{h}")
-    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=conf  A=all")
+    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=conf  A=all  T=theme  1/2/3=fps")
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
