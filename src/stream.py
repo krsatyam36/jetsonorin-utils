@@ -19,6 +19,7 @@ cfg = {}
 _latest_jpeg = None
 _start_time = time.time()
 _shutdown = False
+VERSION = "0.1.0"
 
 # ── Rate Limiter ─────────────────────────────────────────────────────────────
 
@@ -409,7 +410,7 @@ def snapshot():
 def info():
     return jsonify({
         "service": "jetson-stream",
-        "version": "0.1.0",
+        "version": VERSION,
         "uptime": round(time.time() - _start_time, 1),
         "target_fps": target_fps,
         "resolution": f"{cfg.get('width', 0)}x{cfg.get('height', 0)}",
@@ -435,7 +436,9 @@ def uptime():
 
 @app.route("/status")
 def status():
-    return jsonify(engine.get_status())
+    data = engine.get_status()
+    data["version"] = VERSION
+    return jsonify(data)
 
 
 @app.route("/confidence/<direction>")
