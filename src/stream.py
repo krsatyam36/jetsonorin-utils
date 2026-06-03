@@ -438,6 +438,12 @@ def uptime():
     return jsonify({"uptime": round(time.time() - _start_time, 1)})
 
 
+@app.route("/detections")
+def detections():
+    s = engine.get_status()
+    return jsonify(s.get("detection_counts", {}))
+
+
 @app.route("/status")
 def status():
     data = engine.get_status()
@@ -539,6 +545,11 @@ def add_security_headers(response):
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Vary"] = "Authorization, Origin"
+    if engine:
+        counts = engine._detection_counts
+        if counts:
+            total = sum(counts.values())
+            response.headers["X-Detection-Count"] = str(total)
     if request.path.startswith("/video_feed"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
