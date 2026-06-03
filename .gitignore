@@ -51,3 +51,24 @@ build/
 # Coverage
 htmlcov/
 .coverage
+.coverage.*
+coverage.xml
+
+# Docker
+.docker/
+
+# Snapshots / recordings
+snapshots/
+recordings/
+
+# Config overrides
+config.local.yaml
+config.local.yml
+config.override.yaml
+
+# Ruff
+.ruff_cache/
+
+# Pytest
+.pytest_cache/
+test-results/
