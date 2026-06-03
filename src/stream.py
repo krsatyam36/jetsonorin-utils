@@ -426,6 +426,11 @@ def health():
     return jsonify({"status": "ok", "service": "jetson-stream"})
 
 
+@app.route("/ping")
+def ping():
+    return "pong", 200, {"Content-Type": "text/plain"}
+
+
 @app.route("/ready")
 def ready():
     if engine is not None:
