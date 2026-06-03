@@ -436,7 +436,29 @@ def toggle(detector: str):
     return jsonify(engine.get_status())
 
 
-# ── CORS ─────────────────────────────────────────────────────────────────────
+# ── Request Logging ──────────────────────────────────────────────────────────
+
+import logging
+
+request_logger = logging.getLogger("access")
+
+
+@app.before_request
+def log_request_start():
+    from flask import request
+    request._start_time = time.time()
+
+
+@app.after_request
+def log_request(response):
+    from flask import request
+    if hasattr(request, "_start_time"):
+        dur = (time.time() - request._start_time) * 1000
+        request_logger.info("%s %s %s %.0fms", request.method, request.path, response.status_code, dur)
+    return response
+
+
+# ── CORS & Security ──────────────────────────────────────────────────────────
 
 @app.after_request
 def add_security_headers(response):
