@@ -233,9 +233,10 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> confidence
 </div>
 
+<div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
 <div id="fps-badge">-- FPS</div>
 
 <script>
@@ -274,7 +275,15 @@ document.addEventListener('keydown', function(e) {
     a.download = 'snapshot_' + Date.now() + '.jpg';
     a.click();
   }
+  else if (key === '=' || key === '+') { e.preventDefault(); adjustConf('up'); }
+  else if (key === '-') { e.preventDefault(); adjustConf('down'); }
 });
+
+async function adjustConf(dir) {
+  const r = await fetch(BASE + '/confidence/' + dir);
+  const d = await r.json();
+  document.getElementById('conf-badge').textContent = 'Conf: ' + d.confidence.toFixed(2);
+}
 
 setInterval(async () => {
   try {
@@ -309,6 +318,16 @@ def snapshot():
 @app.route("/status")
 def status():
     return jsonify(engine.get_status())
+
+
+@app.route("/confidence/<direction>")
+def confidence(direction: str):
+    thresh = engine.confidence_threshold
+    if direction == "up":
+        engine.set_confidence_threshold(thresh + 0.05)
+    elif direction == "down":
+        engine.set_confidence_threshold(thresh - 0.05)
+    return jsonify({"confidence": engine.confidence_threshold})
 
 
 @app.route("/toggle/<detector>")
@@ -350,7 +369,7 @@ if __name__ == "__main__":
     print(f"\n  Stream:  http://<JETSON_IP>:{port}")
     print(f"  Model:   {cfg['model']}")
     print(f"  Target:  {target_fps} FPS @ {w}x{h}")
-    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot")
+    print(f"  Keys:    F=face  M=motion  H=human  S=snapshot  +/-=confidence")
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
