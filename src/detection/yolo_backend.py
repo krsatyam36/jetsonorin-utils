@@ -53,6 +53,9 @@ class DetectionResult:
     def __repr__(self) -> str:
         return f"DetectionResult(class={self.class_name}, conf={self.confidence:.2f}, bbox={self.bbox})"
 
+    def __str__(self) -> str:
+        return f"{self.class_name} {self.confidence:.2f} @ {self.bbox}"
+
     @property
     def width(self) -> int:
         return self.bbox[2] - self.bbox[0]
