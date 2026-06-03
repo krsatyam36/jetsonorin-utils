@@ -436,6 +436,23 @@ def toggle(detector: str):
     return jsonify(engine.get_status())
 
 
+# ── Error Handlers ────────────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "not_found", "message": str(e)}), 404
+
+
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify({"error": "bad_request", "message": str(e)}), 400
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"error": "internal_error", "message": "Internal server error"}), 500
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
