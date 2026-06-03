@@ -363,6 +363,18 @@ def snapshot():
     return Response(_latest_jpeg, mimetype="image/jpeg")
 
 
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "service": "jetson-stream"})
+
+
+@app.route("/ready")
+def ready():
+    if engine is not None:
+        return jsonify({"status": "ok", "uptime": round(time.time() - _start_time, 1)})
+    return jsonify({"status": "not_ready"}), 503
+
+
 @app.route("/uptime")
 def uptime():
     return jsonify({"uptime": round(time.time() - _start_time, 1)})
