@@ -1,0 +1,12 @@
+# Core streaming
+flask>=3.0.0
+opencv-python>=4.9.0
+
+# YOLO detection backends
+ultralytics>=8.3.0                    # Ultralytics YOLO (v8-v11 native PyTorch)
+onnxruntime-gpu>=1.18.0               # ONNX Runtime with CUDA for Jetson
+tensorrt>=8.6.0                       # TensorRT for Jetson-optimized inference
+pycuda>=2022.2.2                      # CUDA buffer management for TensorRT
+
+# Utilities
+numpy>=1.24.0
