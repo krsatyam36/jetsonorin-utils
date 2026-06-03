@@ -3,6 +3,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 from collections import defaultdict
 
 import cv2
@@ -473,6 +474,7 @@ request_logger = logging.getLogger("access")
 @app.before_request
 def log_request_start():
     request._start_time = time.time()
+    request._request_id = request.headers.get("X-Request-Id", str(uuid.uuid4())[:8])
 
     if request.path.startswith("/video_feed"):
         return
@@ -506,6 +508,9 @@ def log_request(response):
 
 @app.after_request
 def add_security_headers(response):
+    rid = getattr(request, "_request_id", None)
+    if rid:
+        response.headers["X-Request-Id"] = rid
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
