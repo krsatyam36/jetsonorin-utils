@@ -14,6 +14,7 @@ engine = None
 target_fps = 30
 cfg = {}
 _latest_jpeg = None
+_start_time = time.time()
 
 
 # ── Port killer ──────────────────────────────────────────────────────────────
@@ -236,6 +237,7 @@ HTML_PAGE = """\
 
 <button id="theme-btn" onclick="document.body.classList.toggle('light');this.textContent=document.body.classList.contains('light')?'☀':'🌙'">🌙</button>
 <h1>Jetson Detection Stream</h1>
+<p style="font-size:0.8rem;color:#888;margin-bottom:4px" id="info-line">{model} @ {width}x{height}</p>
 
 <div class="status-bar" id="status-bar">
   <span id="s-face" class="off">Face [F]</span>
@@ -249,11 +251,15 @@ HTML_PAGE = """\
 
 <div class="help">
   Click the video then press &nbsp;
-  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp; <kbd>S</kbd> snapshot &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp; <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps &nbsp; <kbd>T</kbd> theme
+  <kbd>F</kbd> face &nbsp; <kbd>M</kbd> motion &nbsp; <kbd>H</kbd> human &nbsp;
+  <kbd>S</kbd> snap &nbsp; <kbd>+</kbd><kbd>-</kbd> conf &nbsp;
+  <kbd>A</kbd> all &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> fps &nbsp;
+  <kbd>T</kbd> theme
 </div>
 
-<div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
+<div id="uptime-badge" style="position:fixed;bottom:10px;left:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.8rem;font-family:monospace;">--</div>
 <div id="fps-badge">-- FPS</div>
+<div id="conf-badge" style="position:fixed;top:34px;right:14px;background:rgba(0,0,0,0.65);padding:4px 12px;border-radius:4px;font-size:0.85rem;font-family:monospace;">Conf: 0.50</div>
 
 <script>
 const BASE = '';
@@ -262,7 +268,8 @@ const badges = {
   motion: document.getElementById('s-motion'),
   human: document.getElementById('s-human'),
 };
-  const fpsEl = document.getElementById('fps-badge');
+const fpsEl = document.getElementById('fps-badge');
+const uptimeEl = document.getElementById('uptime-badge');
 
 async function setFps(val) {
   await fetch(BASE + '/fps/' + val);
@@ -327,6 +334,11 @@ setInterval(async () => {
     const data = await r.json();
     updateUI(data);
   } catch {}
+  try {
+    const r = await fetch(BASE + '/uptime');
+    const d = await r.json();
+    uptimeEl.textContent = 'Up ' + d.uptime + 's';
+  } catch {}
 }, 1000);
 </script>
 </body>
@@ -336,7 +348,7 @@ setInterval(async () => {
 
 @app.route("/")
 def index():
-    return HTML_PAGE, 200, {"Content-Type": "text/html; charset=utf-8"}
+    return HTML_PAGE.format(model=cfg["model"], width=cfg["width"], height=cfg["height"]), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/video_feed")
@@ -349,6 +361,11 @@ def snapshot():
     if _latest_jpeg is None:
         return "No frame yet", 503
     return Response(_latest_jpeg, mimetype="image/jpeg")
+
+
+@app.route("/uptime")
+def uptime():
+    return jsonify({"uptime": round(time.time() - _start_time, 1)})
 
 
 @app.route("/status")
