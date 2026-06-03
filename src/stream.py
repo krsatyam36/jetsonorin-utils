@@ -535,7 +535,8 @@ def server_error(e):
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
+    global cfg, engine, target_fps
     cfg = interactive_setup()
     kill_port(5000)
 
@@ -562,3 +563,7 @@ if __name__ == "__main__":
     print(f"  Status:  http://<JETSON_IP>:{port}/status\n")
 
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+if __name__ == "__main__":
+    main()
