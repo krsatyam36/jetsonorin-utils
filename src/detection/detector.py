@@ -1,14 +1,14 @@
+import logging
 import os
 import time
-import logging
 from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from .yolo_backend import YOLOModelType, YOLOBackend, DetectionResult, create_yolo_backend
 from .face_detector import FaceDetector
 from .motion_detector import MotionDetector
+from .yolo_backend import DetectionResult, YOLOBackend, YOLOModelType, create_yolo_backend
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DetectionEngine")
@@ -47,17 +47,15 @@ class DetectionEngine:
         self.face_detector: Optional[FaceDetector] = None
         self.motion_detector: Optional[MotionDetector] = None
 
-        if self.enable_yolo:
-            self._init_yolo(yolo_model, yolo_model_type, yolo_device)
-        if self.enable_face:
-            self._init_face(face_method)
-        if self.enable_motion:
-            self._init_motion(motion_method, motion_min_area)
+        self._init_yolo(yolo_model, yolo_model_type, yolo_device)
+        self._init_face(face_method)
+        self._init_motion(motion_method, motion_min_area)
 
         self._fps = 0.0
         self._prev_time = time.time()
         self._frame_count = 0
         self._detection_counts = {}
+        self._motion_frame_counter = 0
 
     def _init_yolo(self, model: str, model_type: YOLOModelType, device: str):
         model_path = self._resolve_model_path(model, model_type)
@@ -118,12 +116,14 @@ class DetectionEngine:
                 logger.error("Face detection error: %s", e)
 
         if self.enable_motion and self.motion_detector is not None:
-            try:
-                motion_results = self.motion_detector.detect(frame)
-                all_detections["motion"] = motion_results
-                annotated = self._draw_detections(annotated, motion_results, COLORS["motion"])
-            except Exception as e:
-                logger.error("Motion detection error: %s", e)
+            self._motion_frame_counter += 1
+            if self._motion_frame_counter % 3 == 0:
+                try:
+                    motion_results = self.motion_detector.detect(frame)
+                    all_detections["motion"] = motion_results
+                    annotated = self._draw_detections(annotated, motion_results, COLORS["motion"])
+                except Exception as e:
+                    logger.error("Motion detection error: %s", e)
 
         annotated = self._draw_stats(annotated, all_detections)
         self._detection_counts = {k: len(v) for k, v in all_detections.items()}

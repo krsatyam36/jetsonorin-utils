@@ -1,6 +1,7 @@
+from typing import List, Tuple
+
 import cv2
 import numpy as np
-from typing import List, Optional, Tuple
 
 from .yolo_backend import DetectionResult
 

@@ -92,6 +92,11 @@ MODEL_CATALOG = [
     {"id": "yolo11m.pt", "label": "YOLO11m (Medium)",              "fps_estimate": (15,  40)},
     {"id": "yolo11l.pt", "label": "YOLO11l (Large)",               "fps_estimate": (10,  25)},
     {"id": "yolo11x.pt", "label": "YOLO11x (X-Large) — most accurate", "fps_estimate": (5, 15)},
+    {"id": "yolo8n.pt",  "label": "YOLOv8n (Nano) — lighter/faster",   "fps_estimate": (60, 200)},
+    {"id": "yolo8s.pt",  "label": "YOLOv8s (Small)",                   "fps_estimate": (30,  80)},
+    {"id": "yolo8m.pt",  "label": "YOLOv8m (Medium)",                  "fps_estimate": (15,  40)},
+    {"id": "yolo8l.pt",  "label": "YOLOv8l (Large)",                   "fps_estimate": (10,  25)},
+    {"id": "yolo8x.pt",  "label": "YOLOv8x (X-Large) — most accurate", "fps_estimate": (5, 15)},
 ]
 
 RES_PRESETS = [
@@ -108,8 +113,8 @@ FPS_TARGETS = [
 
 
 def _pick(options, prompt, default=0):
-    for i, (_, desc) in enumerate(options):
-        print(f"  {i+1}) {desc}")
+    for i, opt in enumerate(options):
+        print(f"  {i+1}) {opt[-1]}")
     idx = input(prompt).strip()
     if idx.isdigit() and 1 <= int(idx) <= len(options):
         return options[int(idx) - 1]
@@ -403,7 +408,10 @@ setInterval(async () => {
 @app.route("/")
 def index():
     headers = {"Content-Type": "text/html; charset=utf-8"}
-    return HTML_PAGE.format(model=cfg["model"], width=cfg["width"], height=cfg["height"]), 200, headers
+    html = HTML_PAGE.replace("{model}", cfg["model"])
+    html = html.replace("{width}", str(cfg["width"]))
+    html = html.replace("{height}", str(cfg["height"]))
+    return html, 200, headers
 
 
 @app.route("/video_feed")

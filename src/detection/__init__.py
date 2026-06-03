@@ -1,7 +1,7 @@
 from .detector import DetectionEngine
-from .yolo_backend import YOLOModelType, create_yolo_backend
 from .face_detector import FaceDetector
 from .motion_detector import MotionDetector
+from .yolo_backend import YOLOModelType, create_yolo_backend
 
 __all__ = [
     "DetectionEngine",

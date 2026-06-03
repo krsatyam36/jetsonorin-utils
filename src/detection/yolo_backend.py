@@ -1,9 +1,9 @@
-import os
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Dict, List, Optional, Tuple
+
 import cv2
 import numpy as np
-from enum import Enum
-from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Tuple
 
 COCO_CLASSES = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
@@ -71,9 +71,6 @@ class DetectionResult:
     @property
     def center(self) -> Tuple[int, int]:
         return ((self.bbox[0] + self.bbox[2]) // 2, (self.bbox[1] + self.bbox[3]) // 2)
-
-    def __repr__(self):
-        return f"{self.class_name} [{self.confidence:.2f}] ({self.bbox})"
 
 
 class YOLOBackend(ABC):
@@ -172,7 +169,10 @@ class ONNXBackend(YOLOBackend):
         blob = cv2.dnn.blobFromImage(resized, 1 / 255.0, (w, h), swapRB=True, crop=False)
         return blob.astype(np.float32)
 
-    def _postprocess(self, output: np.ndarray, original_shape: Tuple[int, ...], confidence_threshold: float) -> List[DetectionResult]:
+    def _postprocess(
+        self, output: np.ndarray, original_shape: Tuple[int, ...],
+        confidence_threshold: float,
+    ) -> List[DetectionResult]:
         if output.ndim == 3:
             output = output[0]
         if output.shape[0] == 84:
@@ -221,9 +221,9 @@ class TensorRTBackend(YOLOBackend):
 
     def _load_model(self):
         try:
-            import tensorrt as trt
+            import pycuda.autoinit  # noqa: F401
             import pycuda.driver as cuda
-            import pycuda.autoinit
+            import tensorrt as trt
             with open(self.model_path, "rb") as f:
                 runtime = trt.Runtime(trt.Logger(trt.Logger.WARNING))
                 self.engine = runtime.deserialize_cuda_engine(f.read())
@@ -269,7 +269,10 @@ class TensorRTBackend(YOLOBackend):
         blob = cv2.dnn.blobFromImage(resized, 1 / 255.0, (w, h), swapRB=True, crop=False)
         return blob.astype(np.float32)
 
-    def _postprocess(self, output: np.ndarray, original_shape: Tuple[int, ...], confidence_threshold: float) -> List[DetectionResult]:
+    def _postprocess(
+        self, output: np.ndarray, original_shape: Tuple[int, ...],
+        confidence_threshold: float,
+    ) -> List[DetectionResult]:
         if output.ndim == 3:
             output = output[0]
         if output.shape[0] == 84:
@@ -305,7 +308,10 @@ class TensorRTBackend(YOLOBackend):
         }
 
 
-def create_yolo_backend(model_type: YOLOModelType, model_path: str, model_dir: str = "models", device: str = "cuda:0") -> YOLOBackend:
+def create_yolo_backend(
+    model_type: YOLOModelType, model_path: str,
+    model_dir: str = "models", device: str = "cuda:0",
+) -> YOLOBackend:
     backends = {
         YOLOModelType.ULTRALYTICS: UltralyticsBackend,
         YOLOModelType.ONNX: ONNXBackend,
