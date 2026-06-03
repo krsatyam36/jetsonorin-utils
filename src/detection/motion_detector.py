@@ -20,6 +20,7 @@ class MotionDetector:
         self.min_area = min_area
         self.threshold = threshold
         self.blur_ksize = blur_ksize
+        self.dilate_iters = dilate_iters
         self.method = method.lower()
         self._initialize(history, var_threshold, detect_shadows)
         self._prev_gray = None
